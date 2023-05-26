@@ -6,44 +6,36 @@ import { Loader } from './loader/Loader';
 import { pixabayFetchImages } from 'api/pixabay-fetch';
 
 export const App = () => {
-  const [state, setState] = useState({
-    searchQuery: '',
-    page: 1,
-    totalHits: 0,
-    images: [],
-    isLoading: false,
-    modalOpen: false,
-    modalImg: '',
-    modalImgAlt: '',
-    searchFail: false,
-  });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalHits, setTotalHits] = useState(0);
+  const [images, setImages] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalImg, setModalImg] = useState('');
+  const [modalImgAlt, setModalImgAlt] = useState('');
+  const [searchFail, setSearchFail] = useState(false);
 
   useEffect(() => {
     const fetchImages = async () => {
       try {
-        setState(prevState => ({
-          ...prevState,
-          isLoading: true,
-        }));
+        setIsLoading(true);
         const fetchedImages = await pixabayFetchImages(
-          state.searchQuery,
-          state.page
+          searchQuery,
+          page
         );
-        setState(prevState => ({
-          ...prevState,
-          images: [...prevState.images, ...fetchedImages.hits],
-          totalHits: fetchedImages.totalHits,
-          isLoading: false,
-          searchFail: fetchedImages.hits.length === 0,
-        }));
+        setImages(prevState => [...prevState, ...fetchedImages.hits]);
+        setTotalHits(fetchedImages.totalHits);
+        setIsLoading(false);
+        setSearchFail(fetchedImages.hits.length === 0);
       } catch (error) {
         console.log('Error fetching images:', error);
       }
     };
-    if (state.searchQuery && state.page !== 0) {
+    if (searchQuery && page !== 0) {
       fetchImages();
     }
-  }, [state.searchQuery, state.page]);
+  }, [searchQuery, page]);
 
   const handleSubmit = e => {
     e.preventDefault();
@@ -51,40 +43,28 @@ export const App = () => {
     if (!userQuery) {
       return;
     } else {
-      setState(prevState => ({
-        ...prevState,
-        searchQuery: userQuery,
-        page: 1,
-        images: [],
-      }));
+      setSearchQuery(userQuery);
+      setPage(1);
+      setImages([]);
       e.currentTarget.reset();
     }
   };
 
   const loadMoreImages = () => {
-    setState(prevState => ({
-      ...prevState,
-      page: prevState.page + 1,
-    }));
+    setPage(prevState => prevState + 1);
   };
 
   const handleGalleryClick = e => {
     const imgGallery = e.target.classList.contains('ImageGalleryItem-image');
     const overlay = e.target.classList.contains('overlay');
     if (overlay) {
-      setState(prevState => ({
-        ...prevState,
-        modalOpen: false,
-      }));
+      setModalOpen(false);
     } else if (imgGallery) {
       const image = e.target.dataset.value;
       const tags = e.target.getAttribute('alt');
-      setState(prevState => ({
-        ...prevState,
-        modalOpen: true,
-        modalImg: image,
-        modalImgAlt: tags,
-      }));
+      setModalOpen(true);
+      setModalImg(image);
+      setModalImgAlt(tags);
     }
   };
 
@@ -92,9 +72,12 @@ export const App = () => {
     <>
       <Searchbar onSubmit={handleSubmit} />
       <main>
-        <ImageGallery state={state} handleGalleryClick={handleGalleryClick} />
-        <Loader loading={state.isLoading} />
-        <Button state={state} onClick={loadMoreImages} />
+        <ImageGallery
+          state={{ searchFail, images, modalOpen, modalImg, modalImgAlt }}
+          handleGalleryClick={handleGalleryClick}
+        />
+        <Loader loading={isLoading} />
+        <Button state={{ images, page, totalHits }} onClick={loadMoreImages} />
       </main>
     </>
   );
